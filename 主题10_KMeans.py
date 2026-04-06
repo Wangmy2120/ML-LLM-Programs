@@ -7,10 +7,12 @@ Point = List[float]
 
 
 def squared_distance(a: Point, b: Point) -> float:
+    """计算两点欧氏距离的平方。"""
     return sum((x - y) ** 2 for x, y in zip(a, b))
 
 
 def assign_clusters(points: List[Point], centroids: List[Point]) -> List[int]:
+    """分配步骤：每个样本归到最近的中心点。"""
     labels = []
     for point in points:
         best_idx = min(range(len(centroids)), key=lambda i: squared_distance(point, centroids[i]))
@@ -19,6 +21,7 @@ def assign_clusters(points: List[Point], centroids: List[Point]) -> List[int]:
 
 
 def update_centroids(points: List[Point], labels: List[int], k: int) -> List[Point]:
+    """更新步骤：按簇内样本均值更新中心点。"""
     dim = len(points[0])
     new_centroids = [[0.0] * dim for _ in range(k)]
     counts = [0] * k
@@ -37,11 +40,13 @@ def update_centroids(points: List[Point], labels: List[int], k: int) -> List[Poi
 
 
 def kmeans(points: List[Point], k: int, max_iter: int = 20) -> Tuple[List[Point], List[int]]:
+    """最小 K-Means 迭代实现。"""
     centroids = [points[i][:] for i in range(k)]  # 固定初始化，便于复现
     labels = [0] * len(points)
 
     for _ in range(max_iter):
         new_labels = assign_clusters(points, centroids)
+        # 标签不再变化时认为收敛。
         if new_labels == labels:
             break
         labels = new_labels

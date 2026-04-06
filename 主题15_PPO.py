@@ -13,9 +13,12 @@ def ppo_clipped_objective(
     advantages: List[float],
     eps: float = 0.2,
 ) -> float:
+    """计算 PPO 的 clipped surrogate objective（取样本平均）。"""
     terms = []
     for old_p, new_p, adv in zip(old_probs, new_probs, advantages):
+        # ratio 衡量新旧策略在同一动作上的概率变化幅度。
         ratio = new_p / (old_p + 1e-12)
+        # clip 把更新限制在 [1-eps, 1+eps] 区间内。
         clipped_ratio = min(max(ratio, 1.0 - eps), 1.0 + eps)
         terms.append(min(ratio * adv, clipped_ratio * adv))
     return sum(terms) / len(terms)

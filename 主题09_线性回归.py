@@ -5,10 +5,12 @@ from typing import List, Tuple
 
 
 def predict(x: List[float], w: float, b: float) -> List[float]:
+    """线性模型前向：y_hat = w*x + b。"""
     return [w * xi + b for xi in x]
 
 
 def mse(y_hat: List[float], y: List[float]) -> float:
+    """均方误差损失。"""
     n = len(y)
     return sum((y_hat[i] - y[i]) ** 2 for i in range(n)) / n
 
@@ -19,10 +21,12 @@ def train_linear_regression(
     lr: float = 0.01,
     epochs: int = 2000,
 ) -> Tuple[float, float]:
+    """用批量梯度下降训练一元线性回归参数 w、b。"""
     w, b = 0.0, 0.0
     n = len(x)
     for _ in range(epochs):
         y_hat = predict(x, w, b)
+        # 分别对 w、b 求导并更新。
         grad_w = (2.0 / n) * sum((y_hat[i] - y[i]) * x[i] for i in range(n))
         grad_b = (2.0 / n) * sum(y_hat[i] - y[i] for i in range(n))
         w -= lr * grad_w

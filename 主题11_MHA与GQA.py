@@ -13,6 +13,7 @@ Tensor3D = List[Matrix]
 
 
 def split_heads(x: Matrix, num_heads: int) -> Tensor3D:
+    """按特征维拆分多头：[seq_len, d_model] -> [num_heads, seq_len, head_dim]。"""
     seq_len, d_model = len(x), len(x[0])
     if d_model % num_heads != 0:
         raise ValueError("d_model 必须能被 num_heads 整除")
@@ -21,11 +22,13 @@ def split_heads(x: Matrix, num_heads: int) -> Tensor3D:
 
 
 def merge_heads(heads: Tensor3D) -> Matrix:
+    """合并多头回原维度：[num_heads, seq_len, head_dim] -> [seq_len, d_model]。"""
     seq_len = len(heads[0])
     return [[value for head in heads for value in head[t]] for t in range(seq_len)]
 
 
 def attention(q: Matrix, k: Matrix, v: Matrix) -> Matrix:
+    """单头缩放点积注意力。"""
     scores = matmul(q, transpose(k))
     scale = math.sqrt(len(k[0]))
     for i in range(len(scores)):
@@ -36,6 +39,7 @@ def attention(q: Matrix, k: Matrix, v: Matrix) -> Matrix:
 
 
 def mha(x: Matrix, num_heads: int) -> Matrix:
+    """标准 MHA：每个 Q 头使用对应的 K/V 头。"""
     q_heads = split_heads(x, num_heads)
     k_heads = split_heads(x, num_heads)
     v_heads = split_heads(x, num_heads)
@@ -44,6 +48,7 @@ def mha(x: Matrix, num_heads: int) -> Matrix:
 
 
 def gqa(x: Matrix, num_heads: int, num_kv_heads: int) -> Matrix:
+    """GQA：将多个 Q 头分组后共享同一组 K/V 头。"""
     if num_heads % num_kv_heads != 0:
         raise ValueError("num_heads 必须是 num_kv_heads 的整数倍")
 

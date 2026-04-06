@@ -30,6 +30,7 @@ class KVCache:
 
 
 def weighted_sum(weights: Vector, values: Matrix) -> Vector:
+    """按注意力权重对 value 向量序列做加权求和。"""
     result = [0.0 for _ in range(len(values[0]))]
     for weight, value in zip(weights, values):
         for index in range(len(value)):
@@ -40,6 +41,7 @@ def weighted_sum(weights: Vector, values: Matrix) -> Vector:
 def decode_step(query: Vector, key: Vector, value: Vector, cache: KVCache) -> Tuple[Vector, Vector]:
     """单步解码：先把新 token 的 K/V 放入缓存，再只用当前 Q 与所有缓存做注意力。"""
     cache.append(key, value)
+    # 缩放点积得到 query 对历史所有 key 的打分。
     scale = math.sqrt(len(query))
     scores = [dot(query, cached_key) / scale for cached_key in cache.keys]
     weights = stable_softmax(scores)

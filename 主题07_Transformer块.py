@@ -17,6 +17,7 @@ Matrix = List[List[float]]
 
 
 def stable_softmax(logits: List[float]) -> List[float]:
+    """数值稳定 softmax：先减最大值，避免指数溢出。"""
     max_value = max(logits)
     exp_values = [math.exp(value - max_value) for value in logits]
     total = sum(exp_values)
@@ -24,10 +25,12 @@ def stable_softmax(logits: List[float]) -> List[float]:
 
 
 def transpose(matrix: Matrix) -> Matrix:
+    """矩阵转置。"""
     return [list(column) for column in zip(*matrix)]
 
 
 def matmul(a: Matrix, b: Matrix) -> Matrix:
+    """最小矩阵乘法实现。"""
     result = []
     for i in range(len(a)):
         row = []
@@ -41,6 +44,7 @@ def matmul(a: Matrix, b: Matrix) -> Matrix:
 
 
 def layer_norm(token: Vector, eps: float = 1e-5) -> Vector:
+    """不带可学习参数的 LayerNorm。"""
     avg = sum(token) / len(token)
     var = sum((value - avg) ** 2 for value in token) / len(token)
     std = math.sqrt(var + eps)
@@ -48,6 +52,7 @@ def layer_norm(token: Vector, eps: float = 1e-5) -> Vector:
 
 
 def add_matrix(a: Matrix, b: Matrix) -> Matrix:
+    """两个同形状矩阵逐元素相加。"""
     result = []
     for i in range(len(a)):
         row = []
@@ -58,6 +63,7 @@ def add_matrix(a: Matrix, b: Matrix) -> Matrix:
 
 
 def self_attention(x: Matrix) -> Matrix:
+    """简化自注意力：直接使用 x 作为 Q/K/V。"""
     scores = matmul(x, transpose(x))
     scale = math.sqrt(len(x[0]))
     for i in range(len(scores)):
@@ -68,6 +74,7 @@ def self_attention(x: Matrix) -> Matrix:
 
 
 def linear(x: Vector, weight: Matrix, bias: Vector) -> Vector:
+    """线性变换 y = xW + b。"""
     result = []
     for out_index in range(len(weight[0])):
         value = bias[out_index]
@@ -78,10 +85,12 @@ def linear(x: Vector, weight: Matrix, bias: Vector) -> Vector:
 
 
 def relu(x: Vector) -> Vector:
+    """ReLU 激活函数。"""
     return [max(0.0, value) for value in x]
 
 
 def feed_forward(x: Matrix) -> Matrix:
+    """简化 FFN：对每个 token 做两层线性 + ReLU。"""
     d_model = len(x[0])
     hidden_dim = d_model + 1
     w1 = [[0.1 for _ in range(hidden_dim)] for _ in range(d_model)]
@@ -97,10 +106,13 @@ def feed_forward(x: Matrix) -> Matrix:
 
 
 def transformer_block(x: Matrix) -> Matrix:
+    """最小 Transformer 块：Pre-LN Self-Attn + Residual，再 Pre-LN FFN + Residual。"""
+    # 第一段：归一化 -> 自注意力 -> 残差。
     norm1 = [layer_norm(token) for token in x]
     attn_output = self_attention(norm1)
     x = add_matrix(x, attn_output)
 
+    # 第二段：归一化 -> FFN -> 残差。
     norm2 = [layer_norm(token) for token in x]
     ffn_output = feed_forward(norm2)
     x = add_matrix(x, ffn_output)

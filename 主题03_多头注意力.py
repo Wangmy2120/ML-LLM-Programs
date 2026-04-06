@@ -18,6 +18,7 @@ Tensor3D = List[Matrix]
 
 
 def single_head_attention(q: Matrix, k: Matrix, v: Matrix) -> Tuple[Matrix, Matrix]:
+    """单头注意力：QK^T 缩放后 softmax，再对 V 做加权求和。"""
     scores = matmul(q, transpose(k))
     scale = math.sqrt(len(k[0]))
     for i in range(len(scores)):
@@ -29,6 +30,7 @@ def single_head_attention(q: Matrix, k: Matrix, v: Matrix) -> Tuple[Matrix, Matr
 
 
 def split_heads(x: Matrix, num_heads: int) -> Tensor3D:
+    """把 [seq_len, d_model] 按特征维切成多个头。"""
     seq_len = len(x)
     d_model = len(x[0])
     if d_model % num_heads != 0:
@@ -47,6 +49,7 @@ def split_heads(x: Matrix, num_heads: int) -> Tensor3D:
 
 
 def merge_heads(heads: Tensor3D) -> Matrix:
+    """把多个头按特征维拼回 [seq_len, d_model]。"""
     seq_len = len(heads[0])
     result = []
     for token in range(seq_len):
@@ -59,11 +62,13 @@ def merge_heads(heads: Tensor3D) -> Matrix:
 
 def multi_head_attention(x: Matrix, num_heads: int) -> Matrix:
     """为便于手撕记忆，这里直接使用 x 作为 Q/K/V。"""
+    # 实际工程中通常会先经过线性层得到 Q/K/V，这里省略仅保留主流程。
     q_heads = split_heads(x, num_heads)
     k_heads = split_heads(x, num_heads)
     v_heads = split_heads(x, num_heads)
 
     output_heads = []
+    # 每个头独立做一次注意力。
     for q_head, k_head, v_head in zip(q_heads, k_heads, v_heads):
         output, _ = single_head_attention(q_head, k_head, v_head)
         output_heads.append(output)

@@ -10,6 +10,7 @@ Matrix = List[List[float]]
 
 def lora_forward(x: Matrix, w: Matrix, a: Matrix, b: Matrix, alpha: float, r: int) -> Matrix:
     """y = x @ (W + alpha/r * (B@A))"""
+    # 先构造低秩增量权重 DeltaW，再按 alpha/r 缩放后与原权重相加。
     delta_w = matmul(b, a)
     scaled_delta_w = [[(alpha / r) * value for value in row] for row in delta_w]
     merged_w = [[w[i][j] + scaled_delta_w[i][j] for j in range(len(w[0]))] for i in range(len(w))]

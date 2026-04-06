@@ -14,6 +14,7 @@ Matrix = List[List[float]]
 
 
 def add_residual(x: Matrix, sublayer_output: Matrix) -> Matrix:
+    """残差相加：逐元素计算 x + sublayer(x)。"""
     return [
         [x[i][j] + sublayer_output[i][j] for j in range(len(x[i]))]
         for i in range(len(x))
@@ -21,6 +22,7 @@ def add_residual(x: Matrix, sublayer_output: Matrix) -> Matrix:
 
 
 def pre_norm_residual(x: Matrix, sublayer_output: Matrix) -> Matrix:
+    """Pre-LN 结构：先对输入做 LN，再与子层输出做残差相加。"""
     normalized = [layer_norm(token) for token in x]
     return add_residual(normalized, sublayer_output)
 

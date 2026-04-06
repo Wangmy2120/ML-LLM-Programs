@@ -8,6 +8,7 @@ from typing import List
 
 
 def sigmoid(x: float) -> float:
+    """Sigmoid 函数。"""
     return 1.0 / (1.0 + math.exp(-x))
 
 
@@ -18,8 +19,10 @@ def dpo_loss(
     ref_logp_rejected: List[float],
     beta: float = 0.1,
 ) -> float:
+    """DPO 损失：比较策略模型与参考模型在偏好对上的相对优势。"""
     losses = []
     for plc, plr, rlc, rlr in zip(pi_logp_chosen, pi_logp_rejected, ref_logp_chosen, ref_logp_rejected):
+        # margin>0 表示相对参考模型，策略更偏向 chosen。
         margin = (plc - plr) - (rlc - rlr)
         losses.append(-math.log(sigmoid(beta * margin) + 1e-12))
     return sum(losses) / len(losses)

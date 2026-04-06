@@ -16,6 +16,7 @@ Matrix = List[List[float]]
 
 
 def apply_mask(scores: Matrix, mask: Optional[Matrix]) -> Matrix:
+    """把 mask 按元素加到分数矩阵；None 表示不做掩码。"""
     if mask is None:
         return scores
     return [
@@ -31,13 +32,17 @@ def scaled_dot_product_attention(
     mask: Optional[Matrix] = None,
 ) -> Tuple[Matrix, Matrix]:
     """返回注意力输出和注意力权重。"""
+    # dk 是 key 向量维度，用于缩放分数，避免 softmax 过于尖锐。
     dk = len(k[0])
+    # 先计算相似度矩阵 QK^T。
     scores = matmul(q, transpose(k))
 
+    # 缩放分数：scores / sqrt(dk)。
     for i in range(len(scores)):
         for j in range(len(scores[i])):
             scores[i][j] /= math.sqrt(dk)
 
+    # 掩码 -> softmax -> 与 V 加权求和。
     scores = apply_mask(scores, mask)
     weights = row_softmax(scores)
     output = matmul(weights, v)

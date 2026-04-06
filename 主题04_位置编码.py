@@ -15,6 +15,7 @@ Matrix = List[List[float]]
 
 
 def positional_encoding(seq_len: int, d_model: int) -> Matrix:
+    """生成正弦位置编码矩阵，形状为 [seq_len, d_model]。"""
     if d_model <= 0:
         raise ValueError("d_model 必须大于 0")
 
@@ -22,6 +23,7 @@ def positional_encoding(seq_len: int, d_model: int) -> Matrix:
     for pos in range(seq_len):
         row = []
         for i in range(d_model):
+            # i//2 让偶数/奇数维共享同一频率，只在 sin/cos 上区分。
             angle_rate = pos / (10000 ** (2 * (i // 2) / d_model))
             if i % 2 == 0:
                 row.append(math.sin(angle_rate))

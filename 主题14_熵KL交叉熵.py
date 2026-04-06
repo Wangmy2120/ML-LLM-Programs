@@ -11,14 +11,17 @@ Vector = List[float]
 
 
 def entropy(p: Vector, eps: float = 1e-12) -> float:
+    """熵 H(P)：分布自身不确定性。"""
     return -sum(pi * math.log(pi + eps) for pi in p)
 
 
 def kl_divergence(p: Vector, q: Vector, eps: float = 1e-12) -> float:
+    """KL(P||Q)：用 Q 近似 P 的相对熵。"""
     return sum(pi * math.log((pi + eps) / (qi + eps)) for pi, qi in zip(p, q))
 
 
 def cross_entropy(p: Vector, q: Vector, eps: float = 1e-12) -> float:
+    """交叉熵 CE(P,Q)：用 Q 编码来自 P 样本的平均代价。"""
     return -sum(pi * math.log(qi + eps) for pi, qi in zip(p, q))
 
 

@@ -14,6 +14,7 @@ Matrix = List[List[float]]
 
 
 def linear(x: Vector, weight: Matrix, bias: Vector) -> Vector:
+    """最小线性层：y = xW + b。"""
     result = []
     for out_index in range(len(weight[0])):
         value = bias[out_index]
@@ -24,16 +25,19 @@ def linear(x: Vector, weight: Matrix, bias: Vector) -> Vector:
 
 
 def relu(x: Vector) -> Vector:
+    """ReLU 激活：负数截断为 0。"""
     return [max(0.0, value) for value in x]
 
 
 def feed_forward(token: Vector, w1: Matrix, b1: Vector, w2: Matrix, b2: Vector) -> Vector:
+    """单 token 的两层前馈：Linear -> ReLU -> Linear。"""
     hidden = linear(token, w1, b1)
     hidden = relu(hidden)
     return linear(hidden, w2, b2)
 
 
 def feed_forward_batch(x: Matrix, w1: Matrix, b1: Vector, w2: Matrix, b2: Vector) -> Matrix:
+    """批量版本：对每个 token 独立应用同一个 FFN。"""
     return [feed_forward(token, w1, b1, w2, b2) for token in x]
 
 
