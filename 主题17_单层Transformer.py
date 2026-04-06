@@ -44,10 +44,12 @@ def relu(x: Vector) -> Vector:
     return [max(0.0, value) for value in x]
 
 
-def feed_forward(x: Matrix) -> Matrix:
+def feed_forward(x: Matrix, hidden_dim: int | None = None) -> Matrix:
     """简化 FFN：Linear -> ReLU -> Linear。"""
     d_model = len(x[0])
-    hidden_dim = d_model + 1
+    # 采用 Transformer 常见配置：FFN 隐层维度约为 4 * d_model。
+    hidden_dim = hidden_dim or (4 * d_model)
+    # 这里每次前向都构造固定权重，仅用于手撕演示流程，不涉及参数学习。
     w1 = [[0.1 for _ in range(hidden_dim)] for _ in range(d_model)]
     b1 = [0.0 for _ in range(hidden_dim)]
     w2 = [[0.1 for _ in range(d_model)] for _ in range(hidden_dim)]
