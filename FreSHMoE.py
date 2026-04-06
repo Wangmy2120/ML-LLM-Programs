@@ -14,7 +14,7 @@ FreSHMoE.py
 
 from __future__ import annotations
 
-from typing import Dict
+from typing import Dict, Optional
 
 import torch
 import torch.nn as nn
@@ -41,19 +41,20 @@ class FreSHMoE(nn.Module):
         self.global_experts_num = global_experts_num
 
         self.initialized = False
-        self.segment_len = 0
+        self.segment_len_padded = 0
         self.padded_len = 0
 
         # 懒初始化容器：依赖输入 D 后再构造。
         self.segment_experts = nn.ModuleList()
-        # 先初始化为空模块容器，后续在 lazy_init 中填充，确保模块注册行为明确。
+        # 懒初始化属性（依赖输入维度），首次 forward 时构造。
         self.global_experts = nn.ModuleList()
-        self.segment_fusion_gate = nn.Sequential()
-        self.global_gate = nn.Sequential()
-        self.mix_gate = nn.Sequential()
+        self.segment_fusion_gate: Optional[nn.Sequential] = None
+        self.global_gate: Optional[nn.Sequential] = None
+        self.mix_gate: Optional[nn.Sequential] = None
 
-        # 全局融合比例参数，训练时可学习。
-        self.alpha_learned = nn.Parameter(torch.tensor(0.5))
+        # 用 logit 参数化 alpha，前向用 sigmoid 映射到 [0, 1]。
+        # 初始化时基础 alpha 为 0.5（随后还会被 dynamic_alpha 动态调制）。
+        self.alpha_logit = nn.Parameter(torch.tensor(0.0))
 
         # 便于调试/可视化的最近一次门控权重缓存。
         self.latest_gate_weights: Dict[str, torch.Tensor] = {}
@@ -71,13 +72,16 @@ class FreSHMoE(nn.Module):
         if self.initialized:
             return
 
-        self.segment_len = (d_model + self.segment_num - 1) // self.segment_num
-        self.padded_len = self.segment_len * self.segment_num
+        self.segment_len_padded = (d_model + self.segment_num - 1) // self.segment_num
+        self.padded_len = self.segment_len_padded * self.segment_num
 
         # 1) 分段专家
         for _ in range(self.segment_num):
             experts = nn.ModuleList(
-                [self._build_mlp(self.segment_len, self.segment_len) for _ in range(self.experts_per_segment)]
+                [
+                    self._build_mlp(self.segment_len_padded, self.segment_len_padded)
+                    for _ in range(self.experts_per_segment)
+                ]
             )
             self.segment_experts.append(experts)
 
@@ -116,7 +120,7 @@ class FreSHMoE(nn.Module):
         return self.latest_gate_weights
 
     def _pad_to_segment_size(self, x: torch.Tensor, d_model: int) -> torch.Tensor:
-        """把最后一维补齐到 segment_num * segment_len，便于均匀分段。"""
+        """把最后一维补齐到 segment_num * segment_len_padded，便于均匀分段。"""
         if d_model < self.padded_len:
             x = F.pad(x, (0, self.padded_len - d_model))
         return x
@@ -139,9 +143,11 @@ class FreSHMoE(nn.Module):
         self.lazy_init(d_model=d_model, device=x_fft.device)
 
         real_padded = self._pad_to_segment_size(real, d_model)
+        # 虚部不走专家网络，但需要同样 padding，保证最后复数重组时维度对齐。
         imag_padded = self._pad_to_segment_size(imag, d_model)
 
-        # 取通道平均作为门控与专家输入，避免示例代码过于复杂（仍保持 [B, D] 语义）。
+        # 按通道取平均作为所有门控与专家的共享输入特征（简化处理，避免对每通道独立计算）。
+        # 这样得到形状 [B, D_pad] 的单路特征，随后在 local_moe/global_moe 处扩展回 [B, C, D_pad]。
         real_feature = real_padded.mean(dim=1)  # [B, D_pad]
 
         # ---- A. 分段专家路径 ----
@@ -178,10 +184,11 @@ class FreSHMoE(nn.Module):
         global_moe = torch.sum(global_stack * global_weights, dim=1).unsqueeze(1).expand(-1, channels, -1)
 
         # ---- C. 局部 + 全局融合 ----
-        # alpha_total = clamp(alpha_learned) * dynamic_gate
+        # alpha_total = sigmoid(alpha_logit) * dynamic_gate
         dynamic_alpha = self.mix_gate(global_input).unsqueeze(-1)  # [B,1,1]
-        alpha_total = torch.clamp(self.alpha_learned, 0.0, 1.0) * dynamic_alpha
+        alpha_total = torch.sigmoid(self.alpha_logit) * dynamic_alpha
 
+        # 残差连接 + 局部专家输出 + 加权全局专家输出
         final_real = real_padded + local_moe + alpha_total * global_moe
         final_imag = imag_padded
 
