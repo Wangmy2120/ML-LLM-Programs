@@ -14,7 +14,7 @@ FreSHMoE.py
 
 from __future__ import annotations
 
-from typing import Dict, Tuple
+from typing import Dict
 
 import torch
 import torch.nn as nn
@@ -46,10 +46,11 @@ class FreSHMoE(nn.Module):
 
         # 懒初始化容器：依赖输入 D 后再构造。
         self.segment_experts = nn.ModuleList()
-        self.global_experts: nn.ModuleList | None = None
-        self.segment_fusion_gate: nn.Module | None = None
-        self.global_gate: nn.Module | None = None
-        self.mix_gate: nn.Module | None = None
+        # 先初始化为空模块容器，后续在 lazy_init 中填充，确保模块注册行为明确。
+        self.global_experts = nn.ModuleList()
+        self.segment_fusion_gate = nn.Sequential()
+        self.global_gate = nn.Sequential()
+        self.mix_gate = nn.Sequential()
 
         # 全局融合比例参数，训练时可学习。
         self.alpha_learned = nn.Parameter(torch.tensor(0.5))
