@@ -34,6 +34,7 @@ def main() -> None:
         ("14 熵 / KL / 交叉熵", "主题14_熵KL交叉熵"),
         ("15 PPO", "主题15_PPO"),
         ("16 DPO", "主题16_DPO"),
+        ("17 单层 Transformer", "主题17_单层Transformer"),
     ]
 
     for title, module_name in demos:
